@@ -1,0 +1,55 @@
+"use client";
+
+import { formatDateTime } from "@/lib/format";
+import { trpc } from "@/lib/trpc";
+
+export function TrainerClassCard({
+  classId,
+  className,
+  startsAt,
+  room,
+  durationMin,
+  cancelled,
+}: {
+  classId: number;
+  className: string;
+  startsAt: string;
+  room: string;
+  durationMin: number;
+  cancelled: boolean;
+}) {
+  const { data: roster, isLoading: rosterLoading } =
+    trpc.bookings.rosterFor.useQuery({ classId });
+  const { data: checkinData, isLoading: checkinLoading } =
+    trpc.bookings.checkinCountFor.useQuery({ classId });
+
+  const bookedCount =
+    roster?.filter((r) => r.status === "booked" || r.status === "attended").length || 0;
+  const checkins = checkinData?.count || 0;
+
+  return (
+    <div className="p-3 text-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="font-medium">{className}</div>
+          <div className="muted mt-1 text-xs">
+            {formatDateTime(startsAt)} · {room} · {durationMin} min
+          </div>
+          {!rosterLoading && !checkinLoading && (
+            <div className="muted mt-2 text-xs">
+              📊 {bookedCount} booked · ✓ {checkins} checked in
+            </div>
+          )}
+          {cancelled && (
+            <div
+              className="mt-1 rounded px-2 py-1 text-xs"
+              style={{ background: "#7f1d1d", color: "#fca5a5" }}
+            >
+              Cancelled
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

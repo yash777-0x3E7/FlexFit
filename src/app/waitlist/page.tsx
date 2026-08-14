@@ -1,7 +1,10 @@
 "use client";
 
 import { trpc } from "@/lib/trpc";
-import { formatDateTime } from "@/lib/format";
+import { Loading, ErrorBanner } from "@/components/common/Feedback";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
+import { WaitlistEntry } from "@/components/booking/WaitlistEntry";
 
 export default function WaitlistPage() {
   const utils = trpc.useUtils();
@@ -14,51 +17,35 @@ export default function WaitlistPage() {
     },
   });
 
-  if (isLoading) return <p className="muted">Loading...</p>;
+  if (isLoading) return <Loading />;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Waitlist</h1>
-        <p className="muted mt-1 text-sm">
-          Classes you're waitlisted for
-        </p>
-      </div>
+      <PageHeader
+        title="Waitlist"
+        description="Classes you're waitlisted for"
+      />
 
-      {cancel.error && (
-        <p className="panel p-3 text-sm" style={{ color: "#f87171" }}>
-          {cancel.error.message}
-        </p>
-      )}
+      {cancel.error && <ErrorBanner message={cancel.error.message} />}
 
       {waitlisted?.length ? (
         <div className="space-y-2">
           {waitlisted.map((w) => (
-            <div key={w.bookingId} className="panel flex items-center gap-4 p-4">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium">{w.className}</h3>
-                  <span className="rounded px-2 py-1 text-xs font-medium" style={{ background: "#3a2a1a", color: "#fbbf24" }}>
-                    #{w.position} in queue
-                  </span>
-                </div>
-                <p className="muted mt-0.5 text-sm">
-                  {formatDateTime(w.startsAt)} &middot; {w.room} &middot; {w.durationMin} min
-                </p>
-              </div>
-
-              <button
-                className="btn"
-                disabled={cancel.isPending}
-                onClick={() => cancel.mutate({ bookingId: w.bookingId })}
-              >
-                Leave waitlist
-              </button>
-            </div>
+            <WaitlistEntry
+              key={w.bookingId}
+              bookingId={w.bookingId}
+              className={w.className}
+              startsAt={w.startsAt}
+              room={w.room}
+              durationMin={w.durationMin}
+              position={w.position}
+              cancelPending={cancel.isPending}
+              onLeave={(id) => cancel.mutate({ bookingId: id })}
+            />
           ))}
         </div>
       ) : (
-        <p className="muted text-sm">You're not waitlisted for any classes.</p>
+        <EmptyState message="You're not waitlisted for any classes." />
       )}
     </div>
   );

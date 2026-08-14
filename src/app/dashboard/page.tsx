@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { RescheduleModal } from "@/components/reschedule-modal";
+import { Loading } from "@/components/common/Feedback";
+import { EmptyState } from "@/components/common/EmptyState";
+import { RescheduleModal } from "@/components/booking/RescheduleModal";
+import { BookingCard } from "@/components/booking/BookingCard";
+
+import { UNLIMITED_CREDITS } from "@/lib/constants";
 
 export default function DashboardPage() {
   const [rescheduleModal, setRescheduleModal] = useState<{
@@ -35,7 +40,7 @@ export default function DashboardPage() {
     },
   });
 
-  if (isLoading) return <p className="muted">Loading...</p>;
+  if (isLoading) return <Loading />;
   if (!profile) return <p className="muted">Please sign in to view your bookings.</p>;
 
   const ms = profile.membership;
@@ -69,7 +74,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <dt className="muted">Credits</dt>
-              <dd>{ms.creditsRemaining >= 999 ? "Unlimited" : ms.creditsRemaining}</dd>
+              <dd>{ms.creditsRemaining >= UNLIMITED_CREDITS ? "Unlimited" : ms.creditsRemaining}</dd>
             </div>
           </dl>
         ) : (
@@ -87,7 +92,6 @@ export default function DashboardPage() {
             {successMessage}
           </p>
         )}
-
         {cancel.error && (
           <p className="panel p-3 text-sm" style={{ color: "#f87171" }}>
             {cancel.error.message}
@@ -97,51 +101,24 @@ export default function DashboardPage() {
         {bookings?.length ? (
           <div className="space-y-2">
             {bookings.map((b) => (
-              <div key={b.id} className="panel flex items-center gap-2 p-4 flex-wrap sm:flex-nowrap">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-medium">{b.className}</h3>
-                    <span className="muted text-xs uppercase tracking-wide">
-                      {b.status}
-                    </span>
-                  </div>
-                  <p className="muted mt-0.5 text-sm">
-                    {formatDateTime(b.startsAt)} &middot; {b.room}
-                  </p>
-                </div>
-
-                {(b.status === "booked" || b.status === "waitlisted") && (
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    {b.status === "booked" && (
-                      <button
-                        className="btn text-sm flex-1 sm:flex-none"
-                        disabled={cancel.isPending}
-                        onClick={() => {
-                          setRescheduleModal({
-                            isOpen: true,
-                            bookingId: b.id,
-                            className: b.className,
-                            classTime: b.startsAt,
-                          });
-                        }}
-                      >
-                        Reschedule
-                      </button>
-                    )}
-                    <button
-                      className="btn text-sm flex-1 sm:flex-none"
-                      disabled={cancel.isPending}
-                      onClick={() => cancel.mutate({ bookingId: b.id })}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
+              <BookingCard
+                key={b.id}
+                booking={b}
+                cancelPending={cancel.isPending}
+                onReschedule={() =>
+                  setRescheduleModal({
+                    isOpen: true,
+                    bookingId: b.id,
+                    className: b.className,
+                    classTime: b.startsAt,
+                  })
+                }
+                onCancel={(id) => cancel.mutate({ bookingId: id })}
+              />
             ))}
           </div>
         ) : (
-          <p className="muted text-sm">No upcoming bookings.</p>
+          <EmptyState message="No upcoming bookings." />
         )}
       </section>
 
@@ -152,9 +129,7 @@ export default function DashboardPage() {
             {rescheduleHistory.map((r) => (
               <div key={r.id} className="panel p-4">
                 <div className="text-sm">
-                  <p className="font-medium">
-                    {r.fromClassName}
-                  </p>
+                  <p className="font-medium">{r.fromClassName}</p>
                   <p className="muted text-xs mt-1">
                     From: {formatDateTime(r.fromClassTime ?? "")} • {r.fromClassRoom}
                   </p>
@@ -173,9 +148,7 @@ export default function DashboardPage() {
 
       <RescheduleModal
         isOpen={rescheduleModal.isOpen}
-        onClose={() =>
-          setRescheduleModal({ ...rescheduleModal, isOpen: false })
-        }
+        onClose={() => setRescheduleModal({ ...rescheduleModal, isOpen: false })}
         fromBookingId={rescheduleModal.bookingId}
         fromClassName={rescheduleModal.className}
         fromClassTime={rescheduleModal.classTime}

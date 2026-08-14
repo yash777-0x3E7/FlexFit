@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { formatDateTime } from "@/lib/format";
 
 export default function NotificationsPage() {
+  const utils = trpc.useUtils();
   const { data: notifications, isLoading, error } = trpc.notifications.list.useQuery(
     undefined,
     { retry: false }
@@ -15,8 +16,6 @@ export default function NotificationsPage() {
       utils.notifications.unreadCount.invalidate();
     },
   });
-
-  const utils = trpc.useUtils();
 
   if (isLoading) return <p className="muted">Loading...</p>;
   if (error) return <p className="muted">{error.message}</p>;

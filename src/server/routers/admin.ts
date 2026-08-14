@@ -5,6 +5,7 @@ import {
   memberships,
   classes,
   bookings,
+  corporateBookings,
   payments,
   checkins,
   membershipPlans,
@@ -70,9 +71,8 @@ export const adminRouter = router({
           startsAt: classes.startsAt,
           capacity: classes.capacity,
           booked: sql<number>`(
-            select count(*) from ${bookings}
-            where ${bookings.classId} = ${classes.id}
-              and ${bookings.status} in ('booked','attended')
+            (select count(*) from ${bookings} where ${bookings.classId} = ${classes.id} and ${bookings.status} in ('booked','attended')) +
+            (select count(*) from ${corporateBookings} where ${corporateBookings.classId} = ${classes.id} and ${corporateBookings.status} in ('booked','attended'))
           )`.as("booked"),
         })
         .from(classes)

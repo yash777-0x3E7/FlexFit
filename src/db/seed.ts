@@ -108,6 +108,19 @@ async function seed() {
     )
     .returning();
 
+  // A clean member with no memberships, bookings, company links, or
+  // notifications — useful for testing a fresh account.
+  const testMember = await db
+    .insert(users)
+    .values({
+      email: "new.member@example.com",
+      passwordHash: hashPassword("member123"),
+      name: "New Member",
+      phone: "+91 90000 20001",
+      role: "member" as const,
+    })
+    .returning();
+
   const plans = await db
     .insert(membershipPlans)
     .values([
@@ -357,7 +370,7 @@ async function seed() {
 
   await db.insert(notifications).values(sampleNotifications);
 
-  console.log(`  users:       ${staff.length + members.length}`);
+  console.log(`  users:       ${staff.length + members.length + testMember.length}`);
   console.log(`  plans:       ${plans.length}`);
   console.log(`  memberships: ${createdMemberships.length}`);
   console.log(`  classes:     ${createdClasses.length}`);

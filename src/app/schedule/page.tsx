@@ -1,14 +1,17 @@
 "use client";
 
+import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
-import { formatDateTime } from "@/lib/format";
+import { Loading, ErrorBanner } from "@/components/common/Feedback";
+import { EmptyState } from "@/components/common/EmptyState";
+import { PageHeader } from "@/components/common/PageHeader";
+import { ScheduleClassCard } from "@/components/booking/ScheduleClassCard";
 
 export default function SchedulePage() {
   const utils = trpc.useUtils();
   const { data: user } = trpc.auth.me.useQuery();
-  const { data: classes, isLoading } = trpc.classes.list.useQuery({
-    from: new Date().toISOString(),
-  });
+  const from = useMemo(() => new Date().toISOString(), []);
+  const { data: classes, isLoading } = trpc.classes.list.useQuery({ from });
 
   const book = trpc.bookings.book.useMutation({
     onSuccess: async () => {
@@ -17,67 +20,40 @@ export default function SchedulePage() {
     },
   });
 
-  if (isLoading) return <p className="muted">Loading schedule...</p>;
+  if (isLoading) return <Loading label="Loading schedule..." />;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Class schedule</h1>
-        <p className="muted mt-1 text-sm">
-          {classes?.length ?? 0} upcoming classes
-        </p>
-      </div>
+      <PageHeader
+        title="Class schedule"
+        description={`${classes?.length ?? 0} upcoming classes`}
+      />
 
-      {book.error && (
-        <p className="panel p-3 text-sm" style={{ color: "#f87171" }}>
-          {book.error.message}
-        </p>
-      )}
+      {book.error && <ErrorBanner message={book.error.message} />}
 
       <div className="space-y-2">
         {classes?.map((c) => (
-          <div
+          <ScheduleClassCard
             key={c.id}
-            className="panel flex items-center gap-4 p-4"
-          >
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h2 className="font-medium">{c.name}</h2>
-                {c.full && (
-                  <span className="rounded px-1.5 py-0.5 text-xs" style={{ background: "#3a2a1a", color: "#fbbf24" }}>
-                    Full
-                  </span>
-                )}
-              </div>
-              <p className="muted mt-0.5 text-sm">
-                {formatDateTime(c.startsAt)} &middot; {c.room} &middot;{" "}
-                {c.trainerName ?? "Unassigned"} &middot; {c.durationMin} min
-              </p>
-            </div>
-
-            <div className="text-right text-sm muted">
-              <div>
-                {c.spotsLeft} / {c.capacity} left
-              </div>
-              <div>
-                {c.creditCost} credit{c.creditCost === 1 ? "" : "s"}
-              </div>
-            </div>
-
-            <button
-              className="btn btn-primary"
-              disabled={!user || book.isPending}
-              onClick={() => book.mutate({ classId: c.id })}
-            >
-              {c.full ? "Join waitlist" : "Book"}
-            </button>
-          </div>
+            id={c.id}
+            name={c.name}
+            startsAt={c.startsAt}
+            room={c.room}
+            trainerName={c.trainerName}
+            durationMin={c.durationMin}
+            full={c.full}
+            spotsLeft={c.spotsLeft}
+            capacity={c.capacity}
+            creditCost={c.creditCost}
+            bookDisabled={!user}
+            bookPending={book.isPending}
+            onBook={(id) => book.mutate({ classId: id })}
+          />
         ))}
+        {classes?.length === 0 && <EmptyState message="No upcoming classes." />}
       </div>
 
-      {!user && (
-        <p className="muted text-sm">Sign in to book a class.</p>
-      )}
+      {!user && <p className="muted text-sm">Sign in to book a class.</p>}
     </div>
   );
 }

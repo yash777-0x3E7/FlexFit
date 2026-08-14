@@ -4,67 +4,30 @@ import { useParams } from "next/navigation";
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { formatDateTime } from "@/lib/format";
+import { Loading } from "@/components/common/Feedback";
+import { CompanyTopUpForm } from "@/components/admin/CompanyTopUpForm";
+import { LinkMemberForm } from "@/components/admin/LinkMemberForm";
 
 export default function CompanyDetailsPage() {
   const params = useParams();
   const id = parseInt(params.id as string);
   const { data: company, isLoading, refetch } = trpc.adminCompanies.getById.useQuery({ id });
-  const [topUpAmount, setTopUpAmount] = useState("");
   const [showTopUpForm, setShowTopUpForm] = useState(false);
   const [showMemberForm, setShowMemberForm] = useState(false);
-  const [memberQuery, setMemberQuery] = useState("");
-  const { data: memberSearchData } = trpc.members.search.useQuery(
-    { q: memberQuery },
-    { enabled: memberQuery.length > 2 },
-  );
-
-  const topUpMutation = trpc.adminCompanies.topUp.useMutation({
-    onSuccess: () => {
-      setTopUpAmount("");
-      setShowTopUpForm(false);
-      refetch();
-    },
-  });
 
   const activeMutation = trpc.adminCompanies.updateActive.useMutation({
-    onSuccess: () => {
-      refetch();
-    },
-  });
-
-  const linkMutation = trpc.adminCompanies.linkMember.useMutation({
-    onSuccess: () => {
-      setMemberQuery("");
-      setShowMemberForm(false);
-      refetch();
-    },
+    onSuccess: () => refetch(),
   });
 
   const unlinkMutation = trpc.adminCompanies.unlinkMember.useMutation({
-    onSuccess: () => {
-      refetch();
-    },
+    onSuccess: () => refetch(),
   });
 
-  const handleTopUp = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amount = parseInt(topUpAmount);
-    if (amount > 0) {
-      topUpMutation.mutate({ id, amount });
-    }
-  };
-
   const handleToggleActive = () => {
-    if (company) {
-      activeMutation.mutate({ id, active: !company.active });
-    }
+    if (company) activeMutation.mutate({ id, active: !company.active });
   };
 
-  const handleLinkMember = (userId: number) => {
-    linkMutation.mutate({ companyId: id, userId });
-  };
-
-  if (isLoading) return <p className="muted">Loading...</p>;
+  if (isLoading) return <Loading />;
   if (!company) return <p className="muted">Company not found</p>;
 
   return (
@@ -108,98 +71,26 @@ export default function CompanyDetailsPage() {
       </div>
 
       {showTopUpForm && (
-        <div className="panel p-4">
-          <form onSubmit={handleTopUp} className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">Top Up Amount</label>
-              <input
-                type="number"
-                value={topUpAmount}
-                onChange={(e) => setTopUpAmount(e.target.value)}
-                className="w-full px-3 py-2 border rounded"
-                style={{ borderColor: "var(--border)" }}
-                placeholder="Number of credits"
-                disabled={topUpMutation.isPending}
-                min="1"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="btn"
-                disabled={topUpMutation.isPending || !topUpAmount}
-              >
-                {topUpMutation.isPending ? "Processing..." : "Top Up"}
-              </button>
-              <button
-                type="button"
-                className="btn-outline"
-                onClick={() => setShowTopUpForm(false)}
-                disabled={topUpMutation.isPending}
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        </div>
+        <CompanyTopUpForm
+          companyId={id}
+          onSuccess={() => {
+            setShowTopUpForm(false);
+            refetch();
+          }}
+          onCancel={() => setShowTopUpForm(false)}
+        />
       )}
 
       {showMemberForm && (
-        <div className="panel p-4 space-y-3">
-          <div>
-            <label className="block text-sm font-medium mb-2">Search Members</label>
-            <input
-              type="text"
-              value={memberQuery}
-              onChange={(e) => setMemberQuery(e.target.value)}
-              className="w-full px-3 py-2 border rounded"
-              style={{ borderColor: "var(--border)" }}
-              placeholder="Search by name or email (3+ chars)"
-              disabled={linkMutation.isPending}
-            />
-          </div>
-
-          {memberSearchData && memberSearchData.length > 0 && (
-            <div className="space-y-2 max-h-64 overflow-y-auto">
-              {memberSearchData
-                .filter(
-                  (user: any) =>
-                    !company.members.some((m: any) => m.id === user.id),
-                )
-                .map((user: any) => (
-                  <div
-                    key={user.id}
-                    className="flex items-center justify-between p-2 border rounded"
-                    style={{ borderColor: "var(--border)" }}
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{user.name}</div>
-                      <div className="text-xs muted">{user.email}</div>
-                    </div>
-                    <button
-                      onClick={() => handleLinkMember(user.id)}
-                      className="btn btn-sm"
-                      disabled={linkMutation.isPending}
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )}
-
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={() => {
-              setShowMemberForm(false);
-              setMemberQuery("");
-            }}
-            disabled={linkMutation.isPending}
-          >
-            Done
-          </button>
-        </div>
+        <LinkMemberForm
+          companyId={id}
+          excludedMemberIds={company.members.map((m: any) => m.id)}
+          onSuccess={() => {
+            setShowMemberForm(false);
+            refetch();
+          }}
+          onCancel={() => setShowMemberForm(false)}
+        />
       )}
 
       <div className="space-y-3">
