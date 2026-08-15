@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { formatDateTime } from "@/lib/format";
 
 interface BookingCardProps {
@@ -28,6 +29,7 @@ export function BookingCard({
   onReschedule,
   onCancel,
 }: BookingCardProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
   const isActive = booking.status === "booked" || booking.status === "waitlisted";
 
   return (
@@ -50,22 +52,47 @@ export function BookingCard({
 
       {isActive && (
         <div className="flex items-center gap-2.5 w-full sm:w-auto mt-2 sm:mt-0">
-          {booking.status === "booked" && (
-            <button
-              className="btn btn-sm flex-1 sm:flex-none border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
-              disabled={cancelPending}
-              onClick={onReschedule}
-            >
-              Reschedule
-            </button>
+          {isConfirming ? (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-amber-400 font-medium mr-2">Are you sure?</span>
+              <button
+                className="btn btn-sm btn-danger flex-1 sm:flex-none"
+                disabled={cancelPending}
+                onClick={() => {
+                  onCancel(booking.id);
+                  setIsConfirming(false);
+                }}
+              >
+                Yes, cancel
+              </button>
+              <button
+                className="btn btn-sm flex-1 sm:flex-none"
+                disabled={cancelPending}
+                onClick={() => setIsConfirming(false)}
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <>
+              {booking.status === "booked" && (
+                <button
+                  className="btn btn-sm flex-1 sm:flex-none border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+                  disabled={cancelPending}
+                  onClick={onReschedule}
+                >
+                  Reschedule
+                </button>
+              )}
+              <button
+                className="btn btn-sm btn-danger flex-1 sm:flex-none"
+                disabled={cancelPending}
+                onClick={() => setIsConfirming(true)}
+              >
+                Cancel
+              </button>
+            </>
           )}
-          <button
-            className="btn btn-sm btn-danger flex-1 sm:flex-none"
-            disabled={cancelPending}
-            onClick={() => onCancel(booking.id)}
-          >
-            Cancel
-          </button>
         </div>
       )}
     </div>

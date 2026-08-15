@@ -1,5 +1,12 @@
 export function Loading({ label = "Loading..." }: { label?: string }) {
-  return <p className="muted">{label}</p>;
+  return (
+    <div className="space-y-4 w-full">
+      <div className="skeleton h-8 w-1/3"></div>
+      <div className="skeleton h-32 w-full"></div>
+      <div className="skeleton h-32 w-full"></div>
+      <p className="muted text-sm text-center">{label}</p>
+    </div>
+  );
 }
 
 export function ErrorBanner({
